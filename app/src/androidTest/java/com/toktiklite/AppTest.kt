@@ -13,7 +13,10 @@ import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
+import androidx.test.runner.lifecycle.Stage
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertSame
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -52,18 +55,34 @@ class PlayerTest {
         }
     }
 
+    /** The player screen that's in front, if any. */
+    private fun resumedPlayer(): MainActivity? {
+        var a: MainActivity? = null
+        TestEnv.instrumentation.runOnMainSync {
+            a = ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED)
+                .filterIsInstance<MainActivity>().firstOrNull()
+        }
+        return a
+    }
+
+    private fun tap(url: String) = TestEnv.ctx.startActivity(
+        Intent(Intent.ACTION_VIEW, Uri.parse(url)).setClass(TestEnv.ctx, MainActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+    )
+
     @Test
     fun aNewLinkReplacesTheVideoInTheSameScreen() {
-        open("https://www.tiktok.com/@a/video/1111111111").use { s ->
-            // singleTask: a second link is delivered to the open screen (onNewIntent).
-            s.onActivity {
-                // A copy of the launch intent, so ActivityScenario still recognizes the screen.
-                TestEnv.instrumentation.callActivityOnNewIntent(
-                    it, Intent(it.intent).setData(Uri.parse("https://www.tiktok.com/@b/video/2222222222")),
-                )
-            }
-            assertEquals("https://www.tiktok.com/embed/v2/2222222222", s.loaded())
+        // Like tapping one link, then another while the player is open (singleTask).
+        tap("https://www.tiktok.com/@a/video/1111111111")
+        var first: MainActivity? = null
+        TestEnv.eventually { first = checkNotNull(resumedPlayer()) }
+        tap("https://www.tiktok.com/@b/video/2222222222")
+        TestEnv.eventually {
+            val now = checkNotNull(resumedPlayer())
+            assertSame("same screen", first, now)
+            assertEquals("https://www.tiktok.com/embed/v2/2222222222", now.lastLoadedUrl)
         }
+        TestEnv.instrumentation.runOnMainSync { first?.finish() }
     }
 
     @Test
