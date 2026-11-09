@@ -57,8 +57,9 @@ class PlayerTest {
         open("https://www.tiktok.com/@a/video/1111111111").use { s ->
             // singleTask: a second link is delivered to the open screen (onNewIntent).
             s.onActivity {
+                // A copy of the launch intent, so ActivityScenario still recognizes the screen.
                 TestEnv.instrumentation.callActivityOnNewIntent(
-                    it, Intent(Intent.ACTION_VIEW, Uri.parse("https://www.tiktok.com/@b/video/2222222222")),
+                    it, Intent(it.intent).setData(Uri.parse("https://www.tiktok.com/@b/video/2222222222")),
                 )
             }
             assertEquals("https://www.tiktok.com/embed/v2/2222222222", s.loaded())
