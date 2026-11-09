@@ -1,16 +1,27 @@
 package com.toktiklite
 
+import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import androidx.appcompat.app.AppCompatActivity
+import android.widget.Toast
 
-class MainActivity : AppCompatActivity() {
+/**
+ * Shows one TikTok video in TikTok's embed player: no feed, no recommendations, no account.
+ * Opened by tapping a TikTok link anywhere on the phone (or from the home screen).
+ */
+class MainActivity : Activity() {
 
     private lateinit var webView: WebView
+
+    /** The last URL this screen asked the WebView to load (for tests and diagnostics). */
+    var lastLoadedUrl: String? = null
+        private set
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -28,14 +39,25 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun handleIntent(intent: Intent?) {
-        val url = intent?.data?.toString() ?: return
-        val embedUrl = toEmbedUrl(url) ?: url
-        webView.loadUrl(embedUrl)
+        val incoming = intent?.data?.toString()
+        // Only TikTok links: this screen is exported, so any app could send it any URL.
+        val url = TikTokLinks.forIncoming(incoming)
+        if (url == null) {
+            if (incoming != null) Toast.makeText(this, "Not a TikTok link", Toast.LENGTH_SHORT).show()
+            if (lastLoadedUrl == null) finish()
+            return
+        }
+        load(url)
+    }
+
+    private fun load(url: String) {
+        lastLoadedUrl = url
+        webView.loadUrl(url)
     }
 
     private fun configureWebView() {
         webView.settings.apply {
-            javaScriptEnabled = true
+            javaScriptEnabled = true // TikTok's embed player needs it; only TikTok pages load here
             domStorageEnabled = true
             mediaPlaybackRequiresUserGesture = false
             mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
@@ -44,29 +66,27 @@ class MainActivity : AppCompatActivity() {
         }
 
         webView.webViewClient = object : WebViewClient() {
-            override fun shouldOverrideUrlLoading(
-                view: WebView,
-                request: WebResourceRequest
-            ): Boolean {
+            override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 val url = request.url.toString()
-                val embedUrl = toEmbedUrl(url) ?: return false
+                if (!TikTokLinks.isTikTok(url)) {
+                    // Leave TikTok (a link in a description, an ad): open it in the browser.
+                    if (request.isForMainFrame && request.hasGesture()) openExternally(request.url)
+                    return true
+                }
+                val embedUrl = TikTokLinks.toEmbedUrl(url) ?: return false
+                lastLoadedUrl = embedUrl
                 view.loadUrl(embedUrl)
                 return true
             }
         }
     }
 
-    /**
-     * Converts a TikTok video URL to its embeddable form.
-     * Returns null if the URL is already an embed URL or not a video URL
-     * (so the WebView can load it as-is, e.g. CDN assets or short-link redirects).
-     */
-    private fun toEmbedUrl(url: String): String? {
-        if (url.contains("tiktok.com/embed/")) return null
-
-        val match = VIDEO_URL_REGEX.find(url) ?: return null
-        val videoId = match.groupValues[1]
-        return "https://www.tiktok.com/embed/v2/$videoId"
+    private fun openExternally(uri: Uri) {
+        if (uri.scheme != "https" && uri.scheme != "http") return
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, uri).addCategory(Intent.CATEGORY_BROWSABLE))
+        } catch (e: ActivityNotFoundException) {
+        }
     }
 
     @Deprecated("Deprecated in Java")
@@ -74,16 +94,13 @@ class MainActivity : AppCompatActivity() {
         if (webView.canGoBack()) {
             webView.goBack()
         } else {
+            @Suppress("DEPRECATION")
             super.onBackPressed()
         }
     }
 
-    companion object {
-        // Matches: www.tiktok.com/@user/video/1234567890
-        //          tiktok.com/@user/video/1234567890
-        //          m.tiktok.com/v/1234567890.html
-        private val VIDEO_URL_REGEX = Regex(
-            """tiktok\.com/(?:@[^/]+/video|v)/(\d+)"""
-        )
+    override fun onDestroy() {
+        webView.destroy()
+        super.onDestroy()
     }
 }
