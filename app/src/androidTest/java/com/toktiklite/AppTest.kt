@@ -55,13 +55,13 @@ class PlayerTest {
     @Test
     fun aNewLinkReplacesTheVideoInTheSameScreen() {
         open("https://www.tiktok.com/@a/video/1111111111").use { s ->
-            // singleTask: a second link goes to the open screen (onNewIntent).
-            TestEnv.ctx.startActivity(
-                Intent(TestEnv.ctx, MainActivity::class.java).setAction(Intent.ACTION_VIEW)
-                    .setData(Uri.parse("https://www.tiktok.com/@b/video/2222222222"))
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-            )
-            TestEnv.eventually { assertEquals("https://www.tiktok.com/embed/v2/2222222222", s.loaded()) }
+            // singleTask: a second link is delivered to the open screen (onNewIntent).
+            s.onActivity {
+                TestEnv.instrumentation.callActivityOnNewIntent(
+                    it, Intent(Intent.ACTION_VIEW, Uri.parse("https://www.tiktok.com/@b/video/2222222222")),
+                )
+            }
+            assertEquals("https://www.tiktok.com/embed/v2/2222222222", s.loaded())
         }
     }
 
