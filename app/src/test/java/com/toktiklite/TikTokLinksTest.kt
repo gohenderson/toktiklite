@@ -7,7 +7,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TikTokLinksTest {
-    private val embed = "https://www.tiktok.com/embed/v2/7301234567890123456"
+    private val embed = "https://www.tiktok.com/player/v1/7301234567890123456?autoplay=1&rel=0"
 
     @Test
     fun videoLinksBecomeTheEmbedPlayer() {
@@ -21,6 +21,7 @@ class TikTokLinksTest {
     fun otherTikTokLinksLoadAsIs() {
         assertNull("short links redirect first", TikTokLinks.toEmbedUrl("https://vm.tiktok.com/ZMabc123/"))
         assertNull("already embedded", TikTokLinks.toEmbedUrl(embed))
+        assertNull("the older embed page", TikTokLinks.toEmbedUrl("https://www.tiktok.com/embed/v2/7301234567890123456"))
         assertNull("a profile isn't a video", TikTokLinks.toEmbedUrl("https://www.tiktok.com/@some.user"))
         assertEquals("https://vt.tiktok.com/ZSxyz/", TikTokLinks.forIncoming("https://vt.tiktok.com/ZSxyz/"))
         assertEquals(embed, TikTokLinks.forIncoming("https://www.tiktok.com/@a/video/7301234567890123456"))

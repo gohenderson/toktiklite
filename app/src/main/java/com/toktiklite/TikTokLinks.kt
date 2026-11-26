@@ -5,7 +5,8 @@ import java.net.URI
 /**
  * Pure URL logic (no Android), so it's covered by fast JVM unit tests.
  *
- * - [toEmbedUrl] turns a TikTok video link into TikTok's single-video embed player.
+ * - [toEmbedUrl] turns a TikTok post link (video or photos) into TikTok's embed player,
+ *   which fits the post to the screen.
  * - [isTikTok] decides which pages may load inside the app: TikTok and its CDNs only.
  *   Anything else (a link in a video description, an ad) opens in the browser instead,
  *   so the app's JavaScript-enabled WebView only ever runs TikTok's own pages.
@@ -30,15 +31,21 @@ object TikTokLinks {
     )
 
     /**
-     * The embed player URL for a TikTok video link, or null if [url] isn't a video link
-     * (or is already an embed URL) so it can load as-is (e.g. a short link that redirects).
+     * The embed player URL for a TikTok post link, or null if [url] isn't a post link (or is
+     * already the player) so it can load as-is (e.g. a short link that redirects).
+     *
+     * TikTok's player (player/v1) scales the post to fit the screen, for videos and photo
+     * posts alike; it plays on its own, and at the end shows more from the same creator
+     * rather than recommendations.
      */
     fun toEmbedUrl(url: String): String? {
         if (!isTikTok(url)) return null
-        if (url.contains("tiktok.com/embed/")) return null
+        if (url.contains("tiktok.com/embed/") || url.contains("tiktok.com/player/")) return null
         val videoId = VIDEO_URL_REGEX.find(url)?.groupValues?.get(1) ?: return null
-        return "https://www.tiktok.com/embed/v2/$videoId"
+        return playerUrl(videoId)
     }
+
+    fun playerUrl(postId: String) = "https://www.tiktok.com/player/v1/$postId?autoplay=1&rel=0"
 
     /** True for https URLs on TikTok's own domains (and only those). */
     fun isTikTok(url: String): Boolean {

@@ -44,7 +44,7 @@ class PlayerTest {
     @Test
     fun aVideoLinkOpensTheEmbedPlayer() {
         open("https://www.tiktok.com/@some.user/video/7301234567890123456?lang=en").use {
-            assertEquals("https://www.tiktok.com/embed/v2/7301234567890123456", it.loaded())
+            assertEquals(TikTokLinks.playerUrl("7301234567890123456"), it.loaded())
         }
     }
 
@@ -80,7 +80,7 @@ class PlayerTest {
         TestEnv.eventually {
             val now = checkNotNull(resumedPlayer())
             assertSame("same screen", first, now)
-            assertEquals("https://www.tiktok.com/embed/v2/2222222222", now.lastLoadedUrl)
+            assertEquals(TikTokLinks.playerUrl("2222222222"), now.lastLoadedUrl)
         }
         TestEnv.instrumentation.runOnMainSync { first?.finish() }
     }
