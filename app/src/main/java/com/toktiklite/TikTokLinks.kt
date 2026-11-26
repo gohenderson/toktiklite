@@ -12,9 +12,10 @@ import java.net.URI
  */
 object TikTokLinks {
     // Matches: www.tiktok.com/@user/video/1234567890
+    //          www.tiktok.com/@user/photo/1234567890  (a photo post: "swipe for more")
     //          tiktok.com/@user/video/1234567890
     //          m.tiktok.com/v/1234567890.html
-    private val VIDEO_URL_REGEX = Regex("""tiktok\.com/(?:@[^/]+/video|v)/(\d+)""")
+    private val VIDEO_URL_REGEX = Regex("""tiktok\.com/(?:@[^/]*/(?:video|photo)|v)/(\d+)""")
 
     /** Domains whose pages (and redirects) may load in the app, including subdomains. */
     private val ALLOWED_DOMAINS = listOf(
@@ -56,6 +57,22 @@ object TikTokLinks {
     fun forIncoming(url: String?): String? {
         if (url == null || !isTikTok(url)) return null
         return toEmbedUrl(url) ?: url
+    }
+
+    /** What the player does when a page in it goes to a new address. */
+    sealed interface Navigation {
+        /** Show this post in the embed player instead. */
+        data class Embed(val url: String) : Navigation
+        /** A TikTok page that isn't a post (a short link on its way to one, say): let it load. */
+        data object Load : Navigation
+        /** Not TikTok, or not https: not in the app (the browser, if it was a tap). */
+        data object Leave : Navigation
+    }
+
+    /** Where a navigation to [url] goes. */
+    fun navigate(url: String): Navigation = when {
+        !isTikTok(url) -> Navigation.Leave
+        else -> toEmbedUrl(url)?.let { Navigation.Embed(it) } ?: Navigation.Load
     }
 
     /** Finds the first TikTok link in pasted text (e.g. "Check this out https://vm.tiktok.com/ZM…/"). */

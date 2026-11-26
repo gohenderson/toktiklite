@@ -54,4 +54,24 @@ class TikTokLinksTest {
         assertNull(TikTokLinks.findIn("https://example.com/only"))
         assertNull(TikTokLinks.findIn("nothing here"))
     }
+
+    @Test
+    fun photoPostsUseTheEmbedPlayerToo() {
+        assertEquals(embed, TikTokLinks.toEmbedUrl("https://www.tiktok.com/@mos.mind.vault/photo/7301234567890123456?_r=1"))
+        assertEquals(embed, TikTokLinks.forIncoming("https://www.tiktok.com/@a/photo/7301234567890123456"))
+    }
+
+    @Test
+    fun aShortLinkRedirectsThroughToThePlayer() {
+        // www.tiktok.com/t/… (shared from the app) first loads as-is, then redirects to the post.
+        assertEquals(TikTokLinks.Navigation.Load, TikTokLinks.navigate("https://www.tiktok.com/t/ZTPpsBLpQ/"))
+        assertEquals(TikTokLinks.Navigation.Load, TikTokLinks.navigate("https://vm.tiktok.com/ZMabc123/"))
+        assertEquals(TikTokLinks.Navigation.Embed(embed),
+            TikTokLinks.navigate("https://www.tiktok.com/@mos.mind.vault/photo/7301234567890123456?is_from_webapp=1"))
+        assertEquals(TikTokLinks.Navigation.Embed(embed),
+            TikTokLinks.navigate("https://www.tiktok.com/@a/video/7301234567890123456"))
+        assertEquals("another TikTok page loads", TikTokLinks.Navigation.Load, TikTokLinks.navigate("https://www.tiktok.com/@a"))
+        assertEquals(TikTokLinks.Navigation.Leave, TikTokLinks.navigate("https://example.com/"))
+        assertEquals(TikTokLinks.Navigation.Leave, TikTokLinks.navigate("http://www.tiktok.com/@a/video/7301234567890123456"))
+    }
 }
