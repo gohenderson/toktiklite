@@ -67,13 +67,22 @@ class MainActivity : Activity() {
 
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-                val url = request.url.toString()
-                if (!TikTokLinks.isTikTok(url)) {
-                    // Leave TikTok (a link in a description, an ad): open it in the browser.
-                    if (request.isForMainFrame && request.hasGesture()) openExternally(request.url)
+                val uri = request.url
+                val url = uri.toString()
+
+                // Fail closed: never allow non-HTTPS content in this JavaScript-enabled WebView.
+                if (uri.scheme != "https") {
+                    if (request.isForMainFrame && request.hasGesture()) openExternally(uri)
                     return true
                 }
-                val embedUrl = TikTokLinks.toEmbedUrl(url) ?: return false
+
+                if (!TikTokLinks.isTikTok(url)) {
+                    // Leave TikTok (a link in a description, an ad): open it in the browser.
+                    if (request.isForMainFrame && request.hasGesture()) openExternally(uri)
+                    return true
+                }
+
+                val embedUrl = TikTokLinks.toEmbedUrl(url) ?: return true
                 lastLoadedUrl = embedUrl
                 view.loadUrl(embedUrl)
                 return true
