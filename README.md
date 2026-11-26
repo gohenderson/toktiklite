@@ -75,6 +75,18 @@ Same setup as Gist:
   is found it opens one issue assigned to you (so GitHub emails you) and closes it when
   everything's clear.
 - **Dependabot** (weekly): pull requests for newer libraries and actions.
+- **Combine Dependabot PRs** (on demand): **Actions → Combine Dependabot PRs → Run workflow**,
+  with the PR numbers (say `3 4 5`) or nothing for all open Dependabot PRs. It merges them
+  into one PR, so they need one round of checks and one merge, and comments on each one it
+  took; Dependabot closes those once the combined one is merged. It takes only PRs
+  Dependabot opened whose commits are all its own, and skips (and lists) any that conflict
+  or are already in `main`. One-time setup: a `COMBINE_TOKEN` repository secret (Settings →
+  Secrets and variables → Actions), a fine-grained personal access token for this
+  repository only with **Contents**, **Pull requests** and **Workflows** set to read and
+  write. The built-in token can't push changes to workflow files, and checks don't run on
+  PRs it opens.
+- **Gradle in CI** is the version in `gradle/wrapper/gradle-wrapper.properties`: every
+  workflow reads it from there, so Dependabot's wrapper updates reach CI too.
 - Actions are pinned to commit SHAs, and Gradle caching uses the MIT-licensed basic cache.
 
 ### Releases
