@@ -1,7 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<WebView
+<!-- Black all round; the player sits between the status and navigation bars (see MainActivity). -->
+<FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/webView"
+    android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#000000" />
+    android:background="#000000">
+
+    <WebView
+        android:id="@+id/webView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#000000" />
+</FrameLayout>
