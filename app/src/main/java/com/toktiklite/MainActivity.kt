@@ -70,22 +70,22 @@ class MainActivity : Activity() {
                 val uri = request.url
                 val url = uri.toString()
 
-                // Fail closed: never allow non-HTTPS content in this JavaScript-enabled WebView.
-                if (uri.scheme != "https") {
-                    if (request.isForMainFrame && request.hasGesture()) openExternally(uri)
-                    return true
+                return when (val to = TikTokLinks.navigate(url)) {
+                    // Not TikTok, or not https (fail closed in this JavaScript-enabled WebView):
+                    // a link someone tapped opens in the browser; anything else is dropped.
+                    TikTokLinks.Navigation.Leave -> {
+                        if (request.isForMainFrame && request.hasGesture()) openExternally(uri)
+                        true
+                    }
+                    // A post (a short link's redirect, say): the embed player.
+                    is TikTokLinks.Navigation.Embed -> {
+                        lastLoadedUrl = to.url
+                        view.loadUrl(to.url)
+                        true
+                    }
+                    // Another TikTok page (a short link still redirecting): let it load.
+                    TikTokLinks.Navigation.Load -> false
                 }
-
-                if (!TikTokLinks.isTikTok(url)) {
-                    // Leave TikTok (a link in a description, an ad): open it in the browser.
-                    if (request.isForMainFrame && request.hasGesture()) openExternally(uri)
-                    return true
-                }
-
-                val embedUrl = TikTokLinks.toEmbedUrl(url) ?: return true
-                lastLoadedUrl = embedUrl
-                view.loadUrl(embedUrl)
-                return true
             }
         }
     }
